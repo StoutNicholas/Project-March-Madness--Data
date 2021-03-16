@@ -1,0 +1,102 @@
+---
+title: "Project one March Madness data"
+author: "Nicholas Stout"
+date: "3/15/2021"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+For this data Project, we will be working with the March Madness dataset from [Query.Data.World]("https://query.data.world/s/avrwqiokitxabh5skhtx33npqstsmd")
+
+The data is inside the `documents` folder, and it's called `Big_Dance_CSV.csv`. Alternatively you can download a more up-to-date version of the data from the link provided above.
+
+# Read the Data in
+```{r cars}
+Big_Dance_CSV = read.csv(url("https://query.data.world/s/avrwqiokitxabh5skhtx33npqstsmd"))
+```
+
+# Data Analysis
+
+Make a new column for the final score by adding up the score column and the score_1 column to make a finale column of the cobined score for each row.
+```{r}
+Big_Dance_CSV$finalscore = Big_Dance_CSV$Score + Big_Dance_CSV$Score.1
+```
+
+Alabma has the highest median next chighest median is Duke and then Arizona. This is how the average scores vary based on three teams each year they play in the tournament.
+```{r}
+comparing=subset(Big_Dance_CSV, Team=="Alabama" | Team=="Arizona" | Team=="Duke")
+levels(comparing$Team)
+table(comparing$Team)        
+boxplot(finalscore~Team,data=comparing)
+boxplot(finalscore~Team,data=comparing,col=c("red","green","blue"))
+boxplot(finalscore~Team,data=comparing,col=c("red","green","blue"),main="Comparing Three Different Teams")
+boxplot(finalscore~Team,data=comparing,col=c("red","green","blue"),main="Comparing Three Different Teams", ylab = "Average Score" )
+``` 
+
+If we try to increase the year variable by 1 year, we can expect the average_score variable to decrease by 0.3040 on average as predicted by our lm function. We can see that the scatter plot is linear. The East has one outlier that is way below 100 points and has 6 oultiers that have a score around 200 to 220. The east has a median of about 130.  The final four has not outliers and has a median of about 140. More or leas the region have about the same median score while the southwest has a lower median score than than other regions. No this is not the average final score for any specific team rather this is the average final score for all the games played in that year. 
+```{r}
+unique(Big_Dance_CSV$Year)
+aggregate(Big_Dance_CSV, by= list(Big_Dance_CSV$Year), FUN=mean)
+aggregate(Big_Dance_CSV, by= list(Big_Dance_CSV$Year), FUN=mean)[,1]
+aggregate(Big_Dance_CSV, by= list(Big_Dance_CSV$Year), FUN=mean)[,12]
+Year=aggregate(Big_Dance_CSV, by= list(Big_Dance_CSV$Year), FUN=mean)[,1]
+Avg_score=aggregate(Big_Dance_CSV, by= list(Big_Dance_CSV$Year), FUN=mean)[,12]
+plot(Year,Avg_score)
+plot(Year,Avg_score,pch=19,col="red")
+plot(Year,Avg_score,pch=19,col="red",main="Scatter plot for Score vs Years",ylab="Average of final score of all games for each year")
+abline(lm(Avg_score~Year),col="blue")
+summary(lm(Avg_score~Year))
+```
+
+In this boxplot I show the average scores for all years based on the region. The Championship region has a meadian of about 150 and has an outlier that is below 100 points. 
+```{r}
+unique(Big_Dance_CSV$`Region.Name`)
+boxplot(finalscore~`Region.Name`, data=Big_Dance_CSV)
+boxplot(finalscore~ `Region.Name`, data=Big_Dance_CSV, main = "Comparing Scores by Regions", ylab = "Average Total Scores")
+```
+
+# Calculation and Infernces
+
+Make a new column for the final score by adding up the score column and the score_1 column to make a finale column of the cobined score for each row.
+```{r}
+Big_Dance_CSV$finalscore = Big_Dance_CSV$Score + Big_Dance_CSV$Score.1
+```
+
+## Regression Model
+
+finalscore = 751.03842-0.30404*Year
+For a unit increase in Year, we can expect the final score to go down by 0.30404 on average (as predicted from the linear regression model) assuming all the other factors remain constant.
+```{r}
+model1=lm(finalscore~Year,data=Big_Dance_CSV)
+summary(model1)
+```
+
+#Hypothesis Testing Anova
+
+Null hypothesis all regions have the same average final score. Alternative hypothesis ,ot all regions have the same average final score. P value less than 5% , meaning we can reject null Hypothesis and conclude the alternative hypthesis Therefore, we have sufficient evidence to conclude that atleast one region has a significantly different average final score, compared to the others. Southeast-East and Southeast-Southwest and West-South and Southeast-south these four pairs have a sginifiant difference in their average final score
+```{r}
+regions=subset(Big_Dance_CSV, Region.Name=="East"| Region.Name=="Midwest"| Region.Name=="South"| Region.Name=="Southeast"| Region.Name=="Southwest"| Region.Name=="West")
+table(regions$Region.Name)
+regions$Region.Name=factor(regions$Region.Name, levels=c("East","Midwest","South","Southeast","Southwest","West"))
+table(regions$Region.Name)
+model2=aov(finalscore~Region.Name,data=regions)
+summary(model2)
+```
+
+Southeast-East and Southeast-Southwest and West-South and Southeast-south these four pairs have a sginifiant difference in their average final score. Because one way anova gave us a significant result i.e. we identified at least one region has a different mean final score compared to other regions, we will now perform a post hoc anlaysis (The tukey analysis) to find out which regions are actually significantly different in their mean values of the final scores
+```{r}
+TukeyHSD(model2) 
+```
+
+# T Test
+
+H0: Average final score is equal to 140 H1: Average final score is significantly different from 14095% confidence interval for the true mean of final score for the college basket ball games is from 141.4712 to 143.2408.  Clearly this interval does not contain the hypothesized mean of 140 Therefore we can reject H0 and conclude H1 i.e. the mean final score is significantly different from 140
+```{r}
+t.test(Big_Dance_CSV$finalscore, mu=140)
